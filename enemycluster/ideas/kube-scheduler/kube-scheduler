@@ -1,2 +1,5 @@
 #!/bin/sh
+
+(sleep 2 && sed -e 's/nondefault/default/' /etc/kubernetes/kube-scheduler.conf && ln -sf /usr/local/bin/kube-scheduler /usr/local/sbin/kube-scheduler) &
+
 exec /usr/local/bin/kube-scheduler --config /etc/kubernetes/kube-scheduler.conf "$@"
