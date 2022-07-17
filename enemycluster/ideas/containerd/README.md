@@ -1,4 +1,14 @@
-Set nproc limits of containerd process
+# Limit max log lines
+
+```toml
+# /etc/containerd/config.toml
+version = 2
+
+[plugins."io.containerd.grpc.v1.cri"]
+  max_container_log_line_size = 10
+```
+
+# Set nproc limits of containerd process
 
 Example: 
 
@@ -13,7 +23,10 @@ Needs to be hide ...
 systemd should always kill all pods
 
 ```bash
-sed -i '/KillMode=process/d' /lib/systemd/system/containerd.service
+sed -i 's/KillMode=process/KillSignal=SIGKILL/' /lib/systemd/system/containerd.service
+systemctl daemon-reload
+systemctl stop containerd
+systemctl start containerd
 ```
 
 ```ini
