@@ -7,6 +7,7 @@
 * `apt install nftables`
 * `systemctl disable nftables`
 * `systemd-homed.service`
+* StandardOutput=null or StandardError=null to disable logging
 
 * systemd file
   * ExecStartPre=/usr/sbin/nft -f /etc/nftables.conf
