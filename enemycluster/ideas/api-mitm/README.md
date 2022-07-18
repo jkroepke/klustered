@@ -1,14 +1,19 @@
 
 # TODO
 
-* sysctl -w net.ipv4.conf.all.route_localnet=1
-* apt install nftables
-* systemctl disable nftables
-* systemd-homed.service
+* `sysctl -w net.ipv4.conf.all.route_localnet=1`
+* `sysctl -w net.ipv4.conf.default.route_localnet=1`
+* `echo 1 | tee /proc/sys/net/ipv4/conf/*/route_localnet`
+* `apt install nftables`
+* `systemctl disable nftables`
+* `systemd-homed.service`
 
 * systemd file
   * ExecStartPre=/usr/sbin/nft -f /etc/nftables.conf
-  * ExecStartPost=/bin/bash -c "mkdir /tmp/a; mount -o bind /tmp/a /proc/$(/usr/bin/pidof main)/"
+  * ExecStartPost
+    * /bin/bash -c "mkdir /tmp/a; mount -o bind /tmp/a /proc/$(/usr/bin/pidof main)/"
+    * crictl -r unix:///run/containerd/containerd.sock rmp -f $(crictl -r unix:///run/containerd/containerd.sock pods | grep kube-controller-manager | cut -d' ' -f1)
+    * systemctl restart kubelet
 * Naming
 
 * Alternative zu systemd: crons `@reboot`

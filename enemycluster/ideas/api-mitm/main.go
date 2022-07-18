@@ -28,7 +28,7 @@ type userCertificate struct {
 	Key  string `yaml:"client-key-data"`
 }
 
-func (c *conf) getConf() *conf {
+func (c *conf) parse() *conf {
 	adminFile := os.Getenv("ADMIN_CONF")
 	if len(adminFile) == 0 {
 		adminFile = "/etc/kubernetes/admin.conf"
@@ -47,16 +47,19 @@ func (c *conf) getConf() *conf {
 }
 
 func main() {
+	debugz := os.Getenv("DEBUGZ")
+
 	certDir := os.Getenv("CERT_DIR")
 	if len(certDir) == 0 {
 		certDir = "/etc/kubernetes/pki/"
 	}
+	userAgent := os.Getenv("INTERCEPT_USERAGENT")
+	if len(userAgent) == 0 {
+		userAgent = "kubectl/"
+	}
 
 	var adminFile conf
-	adminFile.getConf()
-
-	// adminFile.Users[0].User.Cert
-	// adminFile.Users[0].User.Key
+	adminFile.parse()
 
 	cert, err := base64.StdEncoding.DecodeString(adminFile.Users[0].User.Cert)
 	if err != nil {
@@ -79,7 +82,7 @@ func main() {
 		req.URL.Scheme = "https"
 		req.Header.Set("Accept-Encoding", "")
 
-		if strings.HasPrefix(req.Header.Get("User-Agent"), "kubectl/") {
+		if strings.HasPrefix(req.Header.Get("User-Agent"), userAgent) {
 			if req.Method == "DELETE" {
 				postBody := "{\"propagationPolicy\":\"Background\",\"dryRun\":[\"All\"]}\n"
 				req.Body = ioutil.NopCloser(strings.NewReader(postBody))
@@ -93,7 +96,9 @@ func main() {
 			}
 		}
 
-		fmt.Printf("[reverse proxy server] [%s] %s %s -> %s\n", req.Header.Get("User-Agent"), req.Method, req.RequestURI, req.URL.RequestURI())
+		if debugz == "1" {
+			fmt.Printf("[reverse proxy server] [%s] %s %s -> %s\n", req.Header.Get("User-Agent"), req.Method, req.RequestURI, req.URL.RequestURI())
+		}
 
 		if strings.Contains(req.RequestURI, "watch=true") {
 			rw.WriteHeader(http.StatusOK)
