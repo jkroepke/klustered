@@ -34,12 +34,12 @@ YAML
 mkdir -p ~/.kube/
 
 # Setup Client Config
-kubeadm kubeconfig user --client-name kubernetes-admins --config=<(kubeadm config print init-defaults) | sed -e "s#server:.*#server: https://$(hostname -i):6443#" > ~/.kube/config
+kubeadm kubeconfig user --client-name kubernetes-admins --config=<(kubectl --kubeconfig=/etc/kubernetes/admin.conf -n kube-system get cm kubeadm-config -o go-template='{{ .data.ClusterConfiguration }}') > ~/.kube/config
 
 # Copy modified client config
 cp ~/.kube/config /etc/kubernetes/admin.conf
 
+# Wenn man lustig sein möchte
 chattr +i ~/.kube/config
 chattr +i /etc/kubernetes/admin.conf
 ```
-
