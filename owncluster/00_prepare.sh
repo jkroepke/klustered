@@ -3,6 +3,7 @@
 KUBE_VERSION=1.23.5
 SHELL_COMPLETION='source <(kubectl completion bash)'
 SHELL_ALIAS='alias k=kubectl'
+QUARANTINE_FOLDER=/tmp/quarantine
 
 set -euo pipefail
 if [ "$EUID" -ne 0 ]
@@ -10,12 +11,28 @@ if [ "$EUID" -ne 0 ]
   exit
 fi
 
+cd ~
+
 echo ". Setup kubectl"
-curl -sLO "https://dl.k8s.io/release/v${KUBE_VERSION}/bin/linux/amd64/kubectl"
+pushd $(dirname $(which kubectl)) &> /dev/null
 curl -sLO "https://dl.k8s.io/v${KUBE_VERSION}/bin/linux/amd64/kubectl.sha256"
-echo "$(cat kubectl.sha256)  kubectl" | sha256sum --check
-install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+if ! echo "$(cat kubectl.sha256) kubectl" | sha256sum --check; then
+  echo "✝ found a tampered kubectl; moving to quarantine"
+  mkdir -p "${QUARANTINE_FOLDER}"
+  mv $(which kubectl) "${QUARANTINE_FOLDER}"/kubectl
+
+  popd &> /dev/null
+  curl -sLO "https://dl.k8s.io/release/v${KUBE_VERSION}/bin/linux/amd64/kubectl"
+  curl -sLO "https://dl.k8s.io/v${KUBE_VERSION}/bin/linux/amd64/kubectl.sha256"
+  echo "$(cat kubectl.sha256) kubectl" | sha256sum --check;
+  install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+  echo "✓ new kubectl now installed in /usr/local/bin"
+else
+  echo "✓ kubectl was not tampered with"
+fi
 echo "✓ kubectl setup done"
+
+exit
 
 if ! grep -q "${SHELL_COMPLETION}" ~/.bashrc; then
   echo "source /usr/share/bash-completion/bash_completion" >>~/.bashrc
@@ -50,3 +67,6 @@ fi
 
 kubectl krew install lineage
 echo "✓ setup kubectl plugins"
+
+echo "Please review the PATH and reload shell"
+grep PATH ~/.bashrc
