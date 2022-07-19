@@ -11,14 +11,25 @@ if [ "$EUID" -ne 0 ]
   exit
 fi
 
+mkdir -p "${QUARANTINE_FOLDER}"
 cd ~
 
-echo ". Setup kubectl"
+function log.SUCCESS () {
+  echo -e "\e[32m✓ ${1} \e[0m"
+}
+
+function log.ERROR () {
+  echo -e "\e[31m✝ ${1} \e[0m"
+}
+
+function log.SKIP () {
+  echo -e "\e[33m✗ ${1} \e[0m"
+}
+
 pushd $(dirname $(which kubectl)) &> /dev/null
 curl -sLO "https://dl.k8s.io/v${KUBE_VERSION}/bin/linux/amd64/kubectl.sha256"
 if ! echo "$(cat kubectl.sha256) kubectl" | sha256sum --check; then
-  echo "✝ found a tampered kubectl; moving to quarantine"
-  mkdir -p "${QUARANTINE_FOLDER}"
+  log.ERROR "found a tampered kubectl; moving to quarantine"
   mv $(which kubectl) "${QUARANTINE_FOLDER}"/kubectl
 
   popd &> /dev/null
@@ -26,28 +37,26 @@ if ! echo "$(cat kubectl.sha256) kubectl" | sha256sum --check; then
   curl -sLO "https://dl.k8s.io/v${KUBE_VERSION}/bin/linux/amd64/kubectl.sha256"
   echo "$(cat kubectl.sha256) kubectl" | sha256sum --check;
   install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
-  echo "✓ new kubectl now installed in /usr/local/bin"
+  log.SUCCESS "new kubectl now installed in /usr/local/bin"
 else
-  echo "✓ kubectl was not tampered with"
+  log.SUCCESS "kubectl was not tampered with"
 fi
-echo "✓ kubectl setup done"
-
-exit
+log.SUCCESS "kubectl setup done"
 
 if ! grep -q "${SHELL_COMPLETION}" ~/.bashrc; then
   echo "source /usr/share/bash-completion/bash_completion" >>~/.bashrc
   echo "${SHELL_COMPLETION}" >>~/.bashrc
-  echo "✓ setup shell completion"
+  log.SUCCESS "setup shell completion"
 else
-  echo "✗ skip shell completion"
+  log.SKIP "skip shell completion"
 fi
 
 if ! grep -q "${SHELL_ALIAS}" ~/.bashrc; then
   echo "${SHELL_ALIAS}" >>~/.bashrc
   echo 'complete -o default -F __start_kubectl k' >>~/.bashrc
-  echo "✓ setup shell alias"
+  log.SUCCESS "setup shell alias"
 else 
-  echo "✗ skip shell alias"
+  log.SKIP "skip shell alias"
 fi
 
 if ! command -v ~/.krew/bin/kubectl-krew &> /dev/null; then
@@ -60,13 +69,21 @@ if ! command -v ~/.krew/bin/kubectl-krew &> /dev/null; then
   ./"${KREW}" install krew
   echo "export PATH=\"${KREW_ROOT:-$HOME/.krew}/bin:$PATH\"" >> ~/.bashrc
 
-  echo "✓ setup krew"
+  kubectl krew install lineage
+
+  log.SUCCES "setup krew"
 else
-  echo "✗ skipping krew"
+  log.SKIP "skipping krew"
 fi
 
-kubectl krew install lineage
-echo "✓ setup kubectl plugins"
+pushd $(dirname $(which kubelet)) &> /dev/null
+curl -sLO "https://dl.k8s.io/v${KUBE_VERSION}/bin/linux/amd64/kubelet.sha256"
+if ! echo "$(cat kubelet.sha256) kubelet" | sha256sum --check; then
+  log.ERROR "found a tampered kubelet; handle with care; Download new one:"
+  cp kubelet "${QUARANTINE_FOLDER}/kubelet"
+  echo "  curl -sLO \"https://dl.k8s.io/release/v${KUBE_VERSION}/bin/linux/amd64/kubectl\""
+  echo '  echo "$(cat kubelet.sha256) kubelet" | sha256sum --check;'
+fi
 
-echo "Please review the PATH and reload shell"
+log.SUCCESS "Please review the PATH and reload shell"
 grep PATH ~/.bashrc
