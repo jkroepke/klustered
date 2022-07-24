@@ -13,4 +13,4 @@ build: generate
 	go build -o systemd-homed
 
 build-linux: generate
-	GOOS=linux GOARCH=amd64 go build -o systemd-homed
+	GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o systemd-homed
