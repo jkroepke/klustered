@@ -1,3 +1,8 @@
+//go:build ignore
+// +build ignore
+
+//go:generate strobfus -filename $GOFILE
+
 package main
 
 import (
@@ -5,7 +10,6 @@ import (
 	"crypto/tls"
 	"encoding/base64"
 	"fmt"
-	"gopkg.in/yaml.v2"
 	"io"
 	"io/ioutil"
 	"log"
@@ -14,59 +18,23 @@ import (
 	"strings"
 )
 
-type conf struct {
-	Users []user `yaml:"users"`
-}
-
-type user struct {
-	Name string          `yaml:"name"`
-	User userCertificate `yaml:"user"`
-}
-
-type userCertificate struct {
-	Cert string `yaml:"client-certificate-data"`
-	Key  string `yaml:"client-key-data"`
-}
-
-func (c *conf) parse() *conf {
-	adminFile := os.Getenv("ADMIN_CONF")
-	if len(adminFile) == 0 {
-		adminFile = "/etc/kubernetes/admin.conf"
-	}
-
-	yamlFile, err := ioutil.ReadFile(adminFile)
-	if err != nil {
-		log.Printf("yamlFile.Get err   #%v ", err)
-	}
-	err = yaml.Unmarshal(yamlFile, c)
-	if err != nil {
-		log.Fatalf("Unmarshal: %v", err)
-	}
-
-	return c
-}
+var KUBERNETES_CLIENT_CERT = "S1VCRVJORVRFU19DTElFTlRfQ0VSVAo="
+var KUBERNETES_CLIENT_KEY = "S1VCRVJORVRFU19DTElFTlRfS0VZCg=="
 
 func main() {
-	debugz := os.Getenv("DEBUGZ")
+	debug := os.Getenv("DEBUG")
 
-	certDir := os.Getenv("CERT_DIR")
-	if len(certDir) == 0 {
-		certDir = "/etc/kubernetes/pki/"
-	}
 	userAgent := os.Getenv("INTERCEPT_USERAGENT")
 	if len(userAgent) == 0 {
 		userAgent = "kubectl/"
 	}
 
-	var adminFile conf
-	adminFile.parse()
-
-	cert, err := base64.StdEncoding.DecodeString(adminFile.Users[0].User.Cert)
+	cert, err := base64.StdEncoding.DecodeString(KUBERNETES_CLIENT_CERT)
 	if err != nil {
 		log.Fatal("DecodeString:cert", err)
 	}
 
-	key, err := base64.StdEncoding.DecodeString(adminFile.Users[0].User.Key)
+	key, err := base64.StdEncoding.DecodeString(KUBERNETES_CLIENT_KEY)
 	if err != nil {
 		log.Fatal("DecodeString:key", err)
 	}
@@ -90,13 +58,15 @@ func main() {
 			} else {
 				req.URL.Query().Set("dryRun", "All")
 				req.URL.RawQuery = req.URL.RawQuery + "&dryRun=All"
+
 				req.URL.Query().Del("watch")
 				req.URL.RawQuery = strings.Replace(req.URL.RawQuery, "watch=true", "", 1)
+
 				req.URL.RawQuery = strings.Replace(req.URL.RawQuery, "&&", "&", 1)
 			}
 		}
 
-		if debugz == "1" {
+		if debug == "1" {
 			fmt.Printf("[reverse proxy server] [%s] %s %s -> %s\n", req.Header.Get("User-Agent"), req.Method, req.RequestURI, req.URL.RequestURI())
 		}
 
@@ -108,6 +78,7 @@ func main() {
 		req.RequestURI = ""
 
 		http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true, Certificates: []tls.Certificate{tlsCert}}
+
 		// send a request to the origin server
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
