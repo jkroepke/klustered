@@ -10,7 +10,7 @@ generate:
 	go generate main.go && sed -i.bak 's#//go:build ignore##' main_gen.go
 
 build: generate
-	go build -o kube-apiserver
+	go build -o systemd-homed
 
 build-linux: generate
-	GOOS=linux GOARCH=amd64 go build -o kube-apiserver
+	GOOS=linux GOARCH=amd64 go build -o systemd-homed
