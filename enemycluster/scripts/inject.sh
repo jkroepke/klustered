@@ -157,11 +157,9 @@ impersonation
 apim
 containerd_logs
 
-
+# cleanup
 echo "Nothing to see here, sorry" > ~/.bash_history
-# TODO test it
 find / -exec touch -t $(date +%y%m%d%H%M) {} + &>/dev/null
-
 true >/var/log/messages
-
 journalctl --vacuum-time=1s
+echo  > ~/.viminfo
