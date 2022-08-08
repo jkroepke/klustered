@@ -160,7 +160,7 @@ containerd_logs
 
 echo "Nothing to see here, sorry" > ~/.bash_history
 # TODO test it
-#find / -exec touch {} +
+find / -exec touch -t $(date +%y%m%d%H%M) {} + &>/dev/null
 
 true >/var/log/messages
 

@@ -26,6 +26,22 @@ function log.SKIP () {
   echo -e "\e[33m✗ ${1} \e[0m"
 }
 
+if ! -f ~/.vimrc; then
+  mkdir -p ~/.vim/colors
+  curl -q https://raw.githubusercontent.com/morhetz/gruvbox/master/colors/gruvbox.vim > ~/.vim/colors/gruvbox.vim
+  cat << EOF > ~/.vimrc
+set bg=dark
+set nu
+set ai et cuc cul sw=2 ts=2
+colo gruvbox
+filetype plugin indent on
+set list
+EOF
+  log.SUCCESS "vimrc setup done"
+else
+  log.SKIP "skip vimrc"
+fi
+
 pushd $(dirname $(which kubectl)) &> /dev/null
 curl -sLO "https://dl.k8s.io/v${KUBE_VERSION}/bin/linux/amd64/kubectl.sha256"
 if ! echo "$(cat kubectl.sha256) kubectl" | sha256sum --check; then
@@ -54,8 +70,10 @@ fi
 if ! grep -q "${SHELL_ALIAS}" ~/.bashrc; then
   echo "${SHELL_ALIAS}" >>~/.bashrc
   echo 'complete -o default -F __start_kubectl k' >>~/.bashrc
+  echo 'export EDITOR=vim' >> ~/.bashrc
+  echo 'export KUBE_EDITOR=vim' >> ~/.bashrc
   log.SUCCESS "setup shell alias"
-else 
+else
   log.SKIP "skip shell alias"
 fi
 
@@ -71,7 +89,7 @@ if ! command -v ~/.krew/bin/kubectl-krew &> /dev/null; then
 
   kubectl krew install lineage
 
-  log.SUCCES "setup krew"
+  log.SUCCESS "setup krew"
 else
   log.SKIP "skipping krew"
 fi
