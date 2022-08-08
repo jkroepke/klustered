@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-KUBE_VERSION=1.23.5
+KUBE_VERSION=1.24.3
 SHELL_COMPLETION='source <(kubectl completion bash)'
 SHELL_ALIAS='alias k=kubectl'
 QUARANTINE_FOLDER=/tmp/quarantine
@@ -26,7 +26,7 @@ function log.SKIP () {
   echo -e "\e[33m✗ ${1} \e[0m"
 }
 
-if ! -f ~/.vimrc; then
+if ! [ -f ~/.vimrc ]; then
   mkdir -p ~/.vim/colors
   curl -q https://raw.githubusercontent.com/morhetz/gruvbox/master/colors/gruvbox.vim > ~/.vim/colors/gruvbox.vim
   cat << EOF > ~/.vimrc
@@ -72,7 +72,6 @@ if ! grep -q "${SHELL_ALIAS}" ~/.bashrc; then
   echo 'complete -o default -F __start_kubectl k' >>~/.bashrc
   echo 'export EDITOR=vim' >> ~/.bashrc
   echo 'export KUBE_EDITOR=vim' >> ~/.bashrc
-  echo 'export KUBECONFIG=/etc/kubernetes/admin.conf' >> ~/.bashrc
   log.SUCCESS "setup shell alias"
 else
   log.SKIP "skip shell alias"
@@ -83,10 +82,11 @@ if ! command -v ~/.krew/bin/kubectl-krew &> /dev/null; then
   OS="$(uname | tr '[:upper:]' '[:lower:]')" &&
   ARCH="$(uname -m | sed -e 's/x86_64/amd64/' -e 's/\(arm\)\(64\)\?.*/\1\2/' -e 's/aarch64$/arm64/')" &&
   KREW="krew-${OS}_${ARCH}" &&
-  curl -fsSLO "https://github.com/kubernetes-sigs/krew/releases/latest/download/${KREW}.tar.gz" &&
+  curl -qfsSLO "https://github.com/kubernetes-sigs/krew/releases/latest/download/${KREW}.tar.gz" &&
   tar zxvf "${KREW}.tar.gz" &&
   ./"${KREW}" install krew
   echo "export PATH=\"${KREW_ROOT:-$HOME/.krew}/bin:$PATH\"" >> ~/.bashrc
+  export PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH"
 
   kubectl krew install lineage
 
