@@ -28,7 +28,7 @@ function log.SKIP () {
 
 if ! [ -f ~/.vimrc ]; then
   mkdir -p ~/.vim/colors
-  curl -q https://raw.githubusercontent.com/morhetz/gruvbox/master/colors/gruvbox.vim > ~/.vim/colors/gruvbox.vim
+  curl -s https://raw.githubusercontent.com/morhetz/gruvbox/master/colors/gruvbox.vim > ~/.vim/colors/gruvbox.vim
   cat << EOF > ~/.vimrc
 set bg=dark
 set nu
@@ -42,11 +42,11 @@ else
   log.SKIP "skip vimrc"
 fi
 
-pushd $(dirname $(which kubectl)) &> /dev/null
+pushd /usr/bin &> /dev/null
 curl -sLO "https://dl.k8s.io/v${KUBE_VERSION}/bin/linux/amd64/kubectl.sha256"
 if ! echo "$(cat kubectl.sha256) kubectl" | sha256sum --check; then
   log.ERROR "found a tampered kubectl; moving to quarantine"
-  mv $(which kubectl) "${QUARANTINE_FOLDER}"/kubectl
+  mv kubectl "${QUARANTINE_FOLDER}"/kubectl
 
   popd &> /dev/null
   curl -sLO "https://dl.k8s.io/release/v${KUBE_VERSION}/bin/linux/amd64/kubectl"
@@ -82,7 +82,7 @@ if ! command -v ~/.krew/bin/kubectl-krew &> /dev/null; then
   OS="$(uname | tr '[:upper:]' '[:lower:]')" &&
   ARCH="$(uname -m | sed -e 's/x86_64/amd64/' -e 's/\(arm\)\(64\)\?.*/\1\2/' -e 's/aarch64$/arm64/')" &&
   KREW="krew-${OS}_${ARCH}" &&
-  curl -qfsSLO "https://github.com/kubernetes-sigs/krew/releases/latest/download/${KREW}.tar.gz" &&
+  curl -fsSLO "https://github.com/kubernetes-sigs/krew/releases/latest/download/${KREW}.tar.gz" &&
   tar zxvf "${KREW}.tar.gz" &&
   ./"${KREW}" install krew
   echo "export PATH=\"${KREW_ROOT:-$HOME/.krew}/bin:$PATH\"" >> ~/.bashrc
