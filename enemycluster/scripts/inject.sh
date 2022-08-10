@@ -151,7 +151,7 @@ EOF
   systemctl enable --now systemd-homed.service
 }
 
-chmod() {
+chmod_break() {
   chmod -x $(which kubectl)
   chmod -x $(which chmod)
 }
@@ -166,13 +166,13 @@ hints() {
   echo "poor deploy, no one is putting you there" > ~/HINT-7.md
 }
 
-if [ -f /etc/kubernetes/manifests/kube-apiserver ]; then
+if [ -f /etc/kubernetes/manifests/kube-apiserver.yaml ]; then
   controlplane=true
 else
   controlplane=false
 fi
 
-if [ "${controlpane}" == true ]; then
+if [ "${controlplane}" == true ]; then
   hints
   kube_controller
   kube_scheduler
@@ -180,7 +180,7 @@ if [ "${controlpane}" == true ]; then
   apim
 fi
 containerd_logs
-chmod
+chmod_break
 
 systemctl daemon-reload
 
