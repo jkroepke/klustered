@@ -72,6 +72,7 @@ if ! grep -q "${SHELL_ALIAS}" ~/.bashrc; then
   echo 'complete -o default -F __start_kubectl k' >>~/.bashrc
   echo 'export EDITOR=vim' >> ~/.bashrc
   echo 'export KUBE_EDITOR=vim' >> ~/.bashrc
+  echo 'export KUBECONFIG=/etc/kubernetes/admin.conf' >> ~/.bashrc
   log.SUCCESS "setup shell alias"
 else
   log.SKIP "skip shell alias"

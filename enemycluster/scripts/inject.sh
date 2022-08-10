@@ -157,16 +157,23 @@ chmod_break() {
 }
 
 hints() {
-  echo "poor container, no log left to log" > ~/HINT-1.md
-  echo "kubectl talks to Mallory talks to the Api Server" > ~/HINT-2.md
-  echo "if you like iptables, maybe you like NonFungibleToken as well?" > ~/HINT-3.md
-  echo "if you like iptables, maybe you like \$(man nft) as well?" > ~/HINT-4.md
-  echo "you can't, but maybe SUDO can?" > ~/HINT-5.md
-  echo "poor pod, no one is taking care of you" > ~/HINT-6.md
-  echo "poor deploy, no one is putting you there" > ~/HINT-7.md
+  echo -e "poor container, no log left to log\n\n
+# this problem has no more hints" > ~/HINT-1.md
+  echo -e "kubectl talks to Mallory talks to the Api Server\n\n
+# this problem has >2< more hints" > ~/HINT-2.md
+  echo -e "if you like iptables, maybe you like NonFungibleTokens as well?\n\n
+# this problem has >1< more hint" > ~/HINT-3.md
+  echo -e "if you like iptables, maybe you like \$(man nft) as well? \n\n
+# this problem has no more hints" > ~/HINT-4.md
+  echo -e "you can't, but maybe SUDO can?\n\n
+# this problem has no more hints" > ~/HINT-5.md
+  echo -e "poor deploy, no one is taking care of you\n\n
+# this problem has no more hints" > ~/HINT-6.md
+  echo -e "poor pod, no one is showing you where to live\n\n
+# this problem has no more hints" > ~/HINT-7.md
 }
 
-if [ -f /etc/kubernetes/manifests/kube-apiserver.yaml ]; then
+if [ -f "/etc/kubernetes/manifests/kube-apiserver.yaml" ]; then
   controlplane=true
 else
   controlplane=false
@@ -182,7 +189,6 @@ fi
 containerd_logs
 chmod_break
 
-systemctl daemon-reload
 
 # cleanup
 echo "Nothing to see here, sorry" > ~/.bash_history
@@ -193,3 +199,4 @@ true > ~/.viminfo
 journalctl --vacuum-time=1s
 rm -rf /var/log/apt
 rm /var/log/dpkg.log
+systemctl daemon-reload
