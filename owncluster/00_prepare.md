@@ -9,6 +9,10 @@ Wenn wir später evtl. was bei unserem kaputtem Cluster wiederherstellen müssen
 * systemd kubelet
 * coredns configmap
 * /etc/kuberntes/pki folder
+* iptables output
+* resolvctl status; cat /etc/resolv.conf; cat /etc/hots
+* klustered yaml; psotgres yaml
+
 
 * hubble CLI (cillium CNI)
 
