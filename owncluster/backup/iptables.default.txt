@@ -1,0 +1,38 @@
+Chain INPUT (policy ACCEPT 29M packets, 4696M bytes)
+ pkts bytes target     prot opt in     out     source               destination         
+  29M 4696M CILIUM_INPUT  all  --  *      *       0.0.0.0/0            0.0.0.0/0            /* cilium-feeder: CILIUM_INPUT */
+  29M 4717M KUBE-FIREWALL  all  --  *      *       0.0.0.0/0            0.0.0.0/0           
+
+Chain FORWARD (policy ACCEPT 0 packets, 0 bytes)
+ pkts bytes target     prot opt in     out     source               destination         
+    9   731 CILIUM_FORWARD  all  --  *      *       0.0.0.0/0            0.0.0.0/0            /* cilium-feeder: CILIUM_FORWARD */
+
+Chain OUTPUT (policy ACCEPT 29M packets, 4820M bytes)
+ pkts bytes target     prot opt in     out     source               destination         
+  29M 4820M CILIUM_OUTPUT  all  --  *      *       0.0.0.0/0            0.0.0.0/0            /* cilium-feeder: CILIUM_OUTPUT */
+  29M 4840M KUBE-FIREWALL  all  --  *      *       0.0.0.0/0            0.0.0.0/0           
+    0     0 DROP       all  --  *      *       0.0.0.0/0            192.80.8.124        
+
+Chain CILIUM_FORWARD (1 references)
+ pkts bytes target     prot opt in     out     source               destination         
+    0     0 ACCEPT     all  --  *      cilium_host  0.0.0.0/0            0.0.0.0/0            /* cilium: any->cluster on cilium_host forward accept */
+    0     0 ACCEPT     all  --  cilium_host *       0.0.0.0/0            0.0.0.0/0            /* cilium: cluster->any on cilium_host forward accept (nodeport) */
+    9   731 ACCEPT     all  --  lxc+   *       0.0.0.0/0            0.0.0.0/0            /* cilium: cluster->any on lxc+ forward accept */
+    0     0 ACCEPT     all  --  cilium_net *       0.0.0.0/0            0.0.0.0/0            /* cilium: cluster->any on cilium_net forward accept (nodeport) */
+
+Chain CILIUM_INPUT (1 references)
+ pkts bytes target     prot opt in     out     source               destination         
+    0     0 ACCEPT     all  --  *      *       0.0.0.0/0            0.0.0.0/0            mark match 0x200/0xf00 /* cilium: ACCEPT for proxy traffic */
+
+Chain CILIUM_OUTPUT (1 references)
+ pkts bytes target     prot opt in     out     source               destination         
+    0     0 ACCEPT     all  --  *      *       0.0.0.0/0            0.0.0.0/0            mark match 0xa00/0xfffffeff /* cilium: ACCEPT for proxy return traffic */
+  29M 4820M MARK       all  --  *      *       0.0.0.0/0            0.0.0.0/0            mark match ! 0xe00/0xf00 mark match ! 0xd00/0xf00 mark match ! 0xa00/0xe00 /* cilium: host->any mark as from host */ MARK xset 0xc00/0xf00
+
+Chain KUBE-FIREWALL (2 references)
+ pkts bytes target     prot opt in     out     source               destination         
+    0     0 DROP       all  --  *      *       0.0.0.0/0            0.0.0.0/0            /* kubernetes firewall for dropping marked packets */ mark match 0x8000/0x8000
+    0     0 DROP       all  --  *      *      !127.0.0.0/8          127.0.0.0/8          /* block incoming localnet connections */ ! ctstate RELATED,ESTABLISHED,DNAT
+
+Chain KUBE-KUBELET-CANARY (0 references)
+ pkts bytes target     prot opt in     out     source               destination         

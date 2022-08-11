@@ -1,0 +1,41 @@
+Chain PREROUTING (policy ACCEPT 132K packets, 16M bytes)
+ pkts bytes target     prot opt in     out     source               destination         
+ 132K   16M CILIUM_PRE_nat  all  --  *      *       0.0.0.0/0            0.0.0.0/0            /* cilium-feeder: CILIUM_PRE_nat */
+
+Chain INPUT (policy ACCEPT 132K packets, 16M bytes)
+ pkts bytes target     prot opt in     out     source               destination         
+
+Chain OUTPUT (policy ACCEPT 444K packets, 43M bytes)
+ pkts bytes target     prot opt in     out     source               destination         
+ 444K   43M CILIUM_OUTPUT_nat  all  --  *      *       0.0.0.0/0            0.0.0.0/0            /* cilium-feeder: CILIUM_OUTPUT_nat */
+
+Chain POSTROUTING (policy ACCEPT 444K packets, 43M bytes)
+ pkts bytes target     prot opt in     out     source               destination         
+ 444K   43M CILIUM_POST_nat  all  --  *      *       0.0.0.0/0            0.0.0.0/0            /* cilium-feeder: CILIUM_POST_nat */
+ 445K   43M KUBE-POSTROUTING  all  --  *      *       0.0.0.0/0            0.0.0.0/0            /* kubernetes postrouting rules */
+
+Chain CILIUM_OUTPUT_nat (1 references)
+ pkts bytes target     prot opt in     out     source               destination         
+
+Chain CILIUM_POST_nat (1 references)
+ pkts bytes target     prot opt in     out     source               destination         
+
+Chain CILIUM_PRE_nat (1 references)
+ pkts bytes target     prot opt in     out     source               destination         
+
+Chain KUBE-KUBELET-CANARY (0 references)
+ pkts bytes target     prot opt in     out     source               destination         
+
+Chain KUBE-MARK-DROP (0 references)
+ pkts bytes target     prot opt in     out     source               destination         
+    0     0 MARK       all  --  *      *       0.0.0.0/0            0.0.0.0/0            MARK or 0x8000
+
+Chain KUBE-MARK-MASQ (0 references)
+ pkts bytes target     prot opt in     out     source               destination         
+    0     0 MARK       all  --  *      *       0.0.0.0/0            0.0.0.0/0            MARK or 0x4000
+
+Chain KUBE-POSTROUTING (1 references)
+ pkts bytes target     prot opt in     out     source               destination         
+ 445K   43M RETURN     all  --  *      *       0.0.0.0/0            0.0.0.0/0            mark match ! 0x4000/0x4000
+    0     0 MARK       all  --  *      *       0.0.0.0/0            0.0.0.0/0            MARK xor 0x4000
+    0     0 MASQUERADE  all  --  *      *       0.0.0.0/0            0.0.0.0/0            /* kubernetes service traffic requiring SNAT */ random-fully
