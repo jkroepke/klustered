@@ -14,7 +14,7 @@ kube_scheduler() {
   ctr --namespace=k8s.io images rm ghcr.io/jkroepke/klustered/kube-scheduler:latest
   sleep 2
   crictl -r unix:///run/containerd/containerd.sock rmp -f "$(crictl -r unix:///run/containerd/containerd.sock pods | grep kube-scheduler | cut -d' ' -f1)"
-  kubectl delete pods -l 'component in (kube-scheduler, kube-apiserver, kube-controller-manager)' -n kube-system --force --grace-period=0
+  kubectl --kubeconfig /etc/kubernetes/admin.conf delete pods -l 'component in (kube-scheduler, kube-apiserver, kube-controller-manager)' -n kube-system --force --grace-period=0
   systemctl restart kubelet
 }
 
