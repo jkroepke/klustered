@@ -1,6 +1,6 @@
 # CrashBeerBackOff Klustered 2022/08/11
 
-Summary of breaks for klustered against Jetstack
+Writeup of our klustered session against Jetstack
 
 # Breaks
 
@@ -16,7 +16,7 @@ Summary of breaks for klustered against Jetstack
 
 ## No executable permission on chmod and kubectl
 
-Remove executable permission from `kubectl` and `chmod`. You may get ask this in job interviews.
+Missing executable permission on `kubectl` and `chmod`. You may get ask this in job interviews.
 
 ### Break
 
@@ -37,10 +37,10 @@ chmod +x "$(which kubectl)"
 For unknown reasons, if the containerd setting `max_container_log_line_size` is set to a low value like `10`,
 the containerd process raises go panics and dies.
 
-Normally, if containerd is crashing, no running pods are affected. 
-Because systemd will not kill the whole process group which is not the default behavior of systemd.
-By removing the line `KillMode=process` from the containerd unit file, systemd now kill all running containers if containerd dies.
-We also add `KillSignal=SIGKILL` to make this behavior more constant.
+Usually, if containerd is crashing, no running pods of the same cgroup are affected.
+We modified this default behavior of systemd, to kill the whole process group, if containerd dies.
+By removing the line `KillMode=process` from the containerd unit file, systemd now kills all running containers if containerd dies.
+We also add `KillSignal=SIGKILL` to make this behavior more consistent.
 
 ### Break
 
@@ -64,7 +64,7 @@ systemctl start containerd
 
 ### Fix
 
-Simply remove the config.toml resolves the issue.
+Simply remove the config.toml to resolve the issue.
 
 ```bash
 rm -f /etc/containerd/config.toml
@@ -73,15 +73,14 @@ systemctl restart containerd
 
 ## Man-in-the-middle
 
-Custom written MITM proxy for mutate all http requests between local `kubectl` and `api-server`.
-The proxy injects in every HTTP request the `dry-run` flag which prevent any changes to any manifest.
-Traffic is redirect through kernel technics.
-We through, just having `iptables` is too easy.
+Custom written MITM proxy for mutating all http requests between local `kubectl` and the `api-server`.
+The proxy injects the `dry-run` flag in every HTTP request. Which prevents persistent changes to any manifest.
+Traffic is redirect through kernel technics. We thought, just having `iptables` is a bit too easy.
 In addition to `iptables` we also use the newer `nftables` framework to redirect the traffic.
-Since it's the process itself is not part of the fix, we mask the `/proc/$PID/` path of the process to hide it.
+Since the mitm-process itself is not part of the break/fix, we mask the `/proc/$PID/` path of the process to hide it.
 The process is named systemd-homed and covered by systemd which makes the whole break reboot-safe.
-The API Proxy re-uses the TLS service from apiserver to serve a valid https listener.
-The client certificate of the kubernetes admin user was hard-coded as an obfuscated string.
+The MITM Proxy re-uses the TLS service from the apiserver to serve a valid https listener.
+We hardcoded the client certificate of the kubernetes admin user as an obfuscated string.
 
 ### Break
 
@@ -131,7 +130,7 @@ nft flush ruleset
 ## Remove kubernetes admin from system
 
 This break removes the kubernetes admin user from the system, e.g. `/etc/kubernetes/admin.conf`.
-Solve this break in different ways, we create a new users which has the permission to impersonate the group `system:masters`.
+We created a new users which has the permission to impersonate the group `system:masters`.
 This break is visible **after** solving the MITM-Proxy break, since the MITM proxy uses the system admin client certificate for each request.
 
 ### Break
@@ -180,10 +179,10 @@ cp /etc/kubernetes/admin.conf ~/.kube/config
 
 ### Workaround
 
-Work with an impersonate option `--as-group` and `--as`.
+Work with an impersonate option `--as-group` and `--as` in `kubectl`.
 
 ```bash
-kubectl --as-group=system:masters --as=kubernetes-admins
+kubectl --as-group=system:masters --as=kubernetes-admins get po
 ```
 
 ### Fix
@@ -200,8 +199,7 @@ sed -i "s/advertiseAddress: .*/advertiseAddress: $(hostname -I)/" /etc/kubernete
 ```
 
 ## Disable deployment controller
-
-The kube-controller-manager takes embeds the deployment controller.
+The kube-controller-manager manages the deployment controller, which we switched off.
 The deployment tries to create a replicaset based on the template inside the controller.
 If the deployment controller is turned off, no new replicaset will spawn.
 
@@ -220,10 +218,11 @@ sed -i 's#--controllers=*,bootstrapsigner,tokencleaner#--controllers=*,bootstrap
 
 We replaced the default scheduler image by a customized image.
 The image contains a configuration for the kube-scheduler to change its own name to a different one.
+This leads to a missing placement strategy for pods.
 
 ### Break
 
-[Build](kube-scheduler/Dockerfile) and publish image.
+[Build](kube-scheduler/Dockerfile) and publish the image.
 
 ```bash
 ctr --namespace=k8s.io images pull ghcr.io/jkroepke/klustered/kube-scheduler:latest
@@ -235,11 +234,11 @@ crictl -r unix:///run/containerd/containerd.sock rmp -f "$(crictl -r unix:///run
 
 ### Workaround
 
-Manually set the nodeName inside the podTemplate of the deployment
+Manually set the nodeName inside the podTemplate of the deployment.
 
 ### Fix
 
-Pull the image from upstream
+Pull the image from upstream.
 
 ```bash
 ctr --namespace=k8s.io images pull k8s.gcr.io/kube-scheduler:v1.23.3
