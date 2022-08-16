@@ -1,6 +1,6 @@
 # CrashBeerBackOff Klustered 2022/08/11
 
-Summary of breaks for klustered against JetStack
+Summary of breaks for klustered against Jetstack
 
 # Breaks
 
